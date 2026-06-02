@@ -390,7 +390,7 @@ const isWindowsCommandShim = (commandPath: string): boolean => {
 };
 
 const buildWindowsCommandShimArgs = (commandPath: string, args: string[]): string[] => {
-  return ['/d', '/c', `call "${commandPath}" ${args.map((arg) => `"${arg.replace(/"/g, '\\"')}"`).join(' ')}`];
+  return ['/d', '/s', '/c', `call "${commandPath}" ${args.map((arg) => `"${arg.replace(/"/g, '\\"')}"`).join(' ')}`];
 };
 
 const resolveCommand = (command: string): { found: boolean; path: string | null; error: string | null } => {
@@ -455,6 +455,7 @@ const readCommandVersion = (command: string): string | null => {
     encoding: 'utf8',
     shell: false,
     timeout: 10_000,
+    windowsVerbatimArguments: isWindowsCommandShim(command),
   });
   if (result.status !== 0) return null;
   return (result.stdout || result.stderr || '').trim() || null;

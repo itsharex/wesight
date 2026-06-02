@@ -61,7 +61,7 @@ const isWindowsCommandShim = (commandPath: string): boolean => {
 };
 
 const buildWindowsCommandShimArgs = (commandPath: string, args: string[]): string[] => {
-  return ['/d', '/c', `call "${commandPath}" ${args.map((arg) => `"${arg.replace(/"/g, '\\"')}"`).join(' ')}`];
+  return ['/d', '/s', '/c', `call "${commandPath}" ${args.map((arg) => `"${arg.replace(/"/g, '\\"')}"`).join(' ')}`];
 };
 
 const ensureDir = (dirPath: string): void => {
@@ -463,6 +463,7 @@ export class HermesEngineManager extends EventEmitter {
         cwd: os.homedir(),
         env,
         stdio: ['ignore', 'pipe', 'pipe'],
+        windowsVerbatimArguments: isWindowsCommandShim(runtime.commandPath),
         windowsHide: process.platform === 'win32',
       },
     );
@@ -598,6 +599,7 @@ export class HermesEngineManager extends EventEmitter {
         ...process.env,
         PATH: buildHermesSearchPath(),
       },
+      windowsVerbatimArguments: isWindowsCommandShim(commandPath),
     });
     if (result.status !== 0) return null;
     return (result.stdout || result.stderr || '').split(/\r?\n/).map((line) => line.trim()).find(Boolean) ?? null;
