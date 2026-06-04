@@ -13,6 +13,7 @@ import type { RootState } from '../../store';
 import type {
   CoworkAgentEngine as CoworkAgentEngineType,
   ExternalAgentEnvironmentSnapshot,
+  ExternalAgentProviderAppType,
 } from '../../types/cowork';
 
 interface CoworkEngineSelectorProps {
@@ -128,6 +129,18 @@ const resolveAuthMeta = (status: CliEngineStatus): { labelKey: string; dotClass:
   }
 };
 
+const getCliAppTypeForEngine = (engine: CoworkAgentEngineType): ExternalAgentProviderAppType | null => {
+  if (engine === CoworkAgentEngine.ClaudeCode) return 'claude';
+  if (engine === CoworkAgentEngine.Codex) return 'codex';
+  if (engine === CoworkAgentEngine.OpenClaw) return 'openclaw';
+  if (engine === CoworkAgentEngine.Hermes) return 'hermes';
+  if (engine === CoworkAgentEngine.OpenCode) return 'opencode';
+  if (engine === CoworkAgentEngine.GrokBuild) return 'grok';
+  if (engine === CoworkAgentEngine.QwenCode) return 'qwen';
+  if (engine === CoworkAgentEngine.DeepSeekTui) return 'deepseek_tui';
+  return null;
+};
+
 const CoworkEngineSelector: React.FC<CoworkEngineSelectorProps> = ({
   dropdownDirection = 'down',
   value,
@@ -148,7 +161,16 @@ const CoworkEngineSelector: React.FC<CoworkEngineSelectorProps> = ({
 
   React.useEffect(() => {
     let mounted = true;
-    coworkService.getAgentEngineSnapshot()
+    const appType = getCliAppTypeForEngine(effectiveEngine);
+    if (!appType) {
+      setSnapshot(null);
+      return () => {
+        mounted = false;
+      };
+    }
+    coworkService.getAgentEngineSnapshot({
+      appTypes: [appType],
+    })
       .then((nextSnapshot) => {
         if (mounted) {
           setSnapshot(nextSnapshot);
@@ -162,7 +184,28 @@ const CoworkEngineSelector: React.FC<CoworkEngineSelectorProps> = ({
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [effectiveEngine]);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    let mounted = true;
+    coworkService.getAgentEngineSnapshot({ forceRefresh: true })
+      .then((nextSnapshot) => {
+        if (mounted) {
+          setSnapshot(nextSnapshot);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setSnapshot(null);
+        }
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [isOpen]);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -195,8 +238,15 @@ const CoworkEngineSelector: React.FC<CoworkEngineSelectorProps> = ({
     try {
       const ok = await coworkService.updateConfig({ agentEngine: engine });
       if (ok) {
-        const nextSnapshot = await coworkService.getAgentEngineSnapshot();
-        setSnapshot(nextSnapshot);
+        const appType = getCliAppTypeForEngine(engine);
+        if (appType) {
+          const nextSnapshot = await coworkService.getAgentEngineSnapshot({
+            appTypes: [appType],
+          });
+          setSnapshot(nextSnapshot);
+        } else {
+          setSnapshot(null);
+        }
         setIsOpen(false);
       } else {
         setSwitchError(i18nService.t('coworkAgentEngineSwitchFailed'));

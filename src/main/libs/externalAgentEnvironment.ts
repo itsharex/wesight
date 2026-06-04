@@ -1033,11 +1033,14 @@ const readBaseSnapshotInputs = (): {
   return { appDir, settingsPath, dbPath, settings };
 };
 
-export function getPlaceholderExternalAgentEnvironmentSnapshot(): ExternalAgentEnvironmentSnapshot {
+export function getPlaceholderExternalAgentEnvironmentSnapshot(
+  options: ExternalAgentEnvironmentProbeOptions = {},
+): ExternalAgentEnvironmentSnapshot {
   const { appDir, settingsPath, dbPath, settings } = readBaseSnapshotInputs();
+  const commands = listAgentEngineCommands(options);
   return {
     ccSwitch: buildCcSwitchSnapshot(appDir, settingsPath, dbPath, settings),
-    engines: AGENT_ENGINE_COMMANDS.map(({ engine, appType, command }) => (
+    engines: commands.map(({ engine, appType, command }) => (
       buildPlaceholderCommandStatus(engine, appType, command, settings, dbPath)
     )),
   };
